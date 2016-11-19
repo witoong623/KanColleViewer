@@ -10,7 +10,6 @@
 			 xmlns:kcvi="http://schemes.grabacr.net/winfx/2015/kancolleviewer/interactivity"
 			 xmlns:kcvv="http://schemes.grabacr.net/winfx/2015/kancolleviewer/converters"
 			 xmlns:metro2="clr-namespace:MetroTrilithon.UI.Controls;assembly=MetroTrilithon.Desktop"
-			 xmlns:models="clr-namespace:Grabacr07.KanColleViewer.Models"
 			 xmlns:views="clr-namespace:Grabacr07.KanColleViewer.Views"
 			 xmlns:controls="clr-namespace:Grabacr07.KanColleViewer.Views.Controls"
 			 xmlns:contents="clr-namespace:Grabacr07.KanColleViewer.Views.Contents"
@@ -24,6 +23,7 @@
 
 	<UserControl.Resources>
 		<kcvv:HasFlagConverter x:Key="HasFlagConverter" />
+		<converters:RangeToBooleanConverter x:Key="RangeToBooleanConverter" />
 	</UserControl.Resources>
 
 	<i:Interaction.Triggers>
@@ -78,7 +78,7 @@
 			<metro2:CallMethodButton Grid.Row="0"
 									 Grid.RowSpan="2"
 									 Grid.Column="1"
-									 Content="{Binding Resources.Fleets_Button_Details, Source={x:Static models:ResourceService.Current}, Mode=OneWay}"
+									 Content="艦隊詳細"
 									 Margin="0,0,10,3"
 									 Padding="12,8"
 									 MethodName="ShowFleetWindow" />
@@ -96,7 +96,6 @@
 						<DataTemplate>
 							<StackPanel>
 								<StackPanel.Resources>
-									<converters:NameLevelAdeptToStringConverter x:Key="NameWithLevelConverter" />
 									<Style TargetType="{x:Type TextBlock}"
 										   BasedOn="{StaticResource DefaultTextStyleKey}">
 										<Setter Property="Margin"
@@ -149,14 +148,7 @@
 											   Margin="4,0,10,0">
 										<Run Text="{Binding Ship.Info.Name, Mode=OneWay}"
 											 FontSize="22"
-											 FontFamily="{DynamicResource ShipNames}"
 											 Style="{DynamicResource EmphaticTextElementStyleKey}" />
-										<TextBlock.ToolTip>
-											<TextBlock Margin="0,-2,0,0">
-											<Run Text="{Binding StatsToolTip, Mode=OneWay}"
-												 FontSize="11" />
-											</TextBlock>
-										</TextBlock.ToolTip>
 									</TextBlock>
 
 									<TextBlock Grid.Column="3"
@@ -181,8 +173,7 @@
 											   Grid.Column="4"
 											   Grid.Row="0"
 											   Margin="10,0,10,10"
-											   Grid.RowSpan="2"
-											   ToolTip="{Binding RepairToolTip, Mode=OneWay}">
+											   Grid.RowSpan="2">
 										<Run Text="HP:" />
 										<Run Text="{Binding Ship.HP.Current, Mode=OneWay}"
 											 Style="{DynamicResource EmphaticTextElementStyleKey}" />
@@ -205,7 +196,7 @@
 										<Border Background="{DynamicResource FleetRepairingBrushKey}"
 												Opacity=".4"
 												Margin="5,0" />
-										<TextBlock Text="{Binding Resources.Ship_Repairing, Source={x:Static models:ResourceService.Current}, Mode=OneWay}"
+										<TextBlock Text="入渠中"
 												   Style="{DynamicResource EmphaticTextStyleKey}"
 												   HorizontalAlignment="Center" />
 									</Grid>
@@ -218,7 +209,7 @@
 										<Border Background="{DynamicResource FleetRepairingBrushKey}"
 												Opacity=".4"
 												Margin="5,0" />
-										<TextBlock Text="{Binding Resources.Ship_Evacuating, Source={x:Static models:ResourceService.Current}, Mode=OneWay}"
+										<TextBlock Text="退避済"
 												   Style="{DynamicResource EmphaticTextStyleKey}"
 												   HorizontalAlignment="Center" />
 									</Grid>
@@ -245,12 +236,14 @@
 														 Width="55"
 														 LimitedValue="{Binding Ship.Fuel, Mode=OneWay}"
 														 Height="6"
+														 Columns="5"
 														 Margin="0,6,0,7" />
 									<kcvc:ColorIndicator Grid.Column="6"
 														 Grid.Row="1"
 														 Width="55"
 														 LimitedValue="{Binding Ship.Bull, Mode=OneWay}"
 														 Height="6"
+														 Columns="5"
 														 VerticalAlignment="Top" />
 
 									<ItemsControl Grid.Column="7"
@@ -266,22 +259,104 @@
 										</ItemsControl.Template>
 										<ItemsControl.ItemTemplate>
 											<DataTemplate>
-												<Border x:Name="Elements"
-														Background="Transparent">
-														<Border.ToolTip>
-															<MultiBinding Converter="{StaticResource NameWithLevelConverter}">
-																<Binding Path="Item.Info.Name" Mode="OneWay" />
-																<Binding Path="Item.Level" Mode="OneWay" />
-																<Binding Path="Item.Proficiency" Mode="OneWay" />
-															</MultiBinding>
-														</Border.ToolTip>
+												<Grid x:Name="Elements"
+													  ToolTip="{Binding Item.NameWithLevel}"
+													  Background="Transparent">
 													<kcvc:SlotItemIcon Type="{Binding Item.Info.IconType}"
 																	   Margin="3,0" />
-												</Border>
+
+													<Grid x:Name="ItemProficiencyBlock"
+														  Background="#66000000"
+														  VerticalAlignment="Top"
+														  HorizontalAlignment="Right"
+														  Panel.ZIndex="1"
+														  Width="12"
+														  Height="12">
+														<Path Stretch="Uniform"
+															  VerticalAlignment="Center"
+															  HorizontalAlignment="Center"
+															  Panel.ZIndex="1"
+															  Width="10"
+															  Height="10">
+															<Path.Style>
+																<Style TargetType="{x:Type Path}">
+																	<Setter Property="Fill"
+																			Value="#FFD49C0F" />
+																	<Style.Triggers>
+																		<DataTrigger Binding="{Binding Item.Proficiency, Converter={StaticResource RangeToBooleanConverter}, ConverterParameter=1-3}"
+																					 Value="True">
+																			<Setter Property="Fill"
+																					Value="#FF98B3CE" />
+																		</DataTrigger>
+																		<DataTrigger Binding="{Binding Item.Proficiency}"
+																					 Value="1">
+																			<Setter Property="Data"
+																					Value="M7,2 L9,2 9,14 7,14Z" />
+																		</DataTrigger>
+																		<DataTrigger Binding="{Binding Item.Proficiency}"
+																					 Value="2">
+																			<Setter Property="Data"
+																					Value="M5,2 L7,2 7,14 5,14Z M8,2 L10,2 10,14 8,14Z" />
+																		</DataTrigger>
+																		<DataTrigger Binding="{Binding Item.Proficiency}"
+																					 Value="3">
+																			<Setter Property="Data"
+																					Value="M4,2 L6,2 6,14 4,14Z M7,2 L9,2 9,14 7,14Z M10,2 L12,2 12,14 10,14Z" />
+																		</DataTrigger>
+																		<DataTrigger Binding="{Binding Item.Proficiency}"
+																					 Value="4">
+																			<Setter Property="Data"
+																					Value="M5.5,2 L7.5,2 10.5,14 8.5,14Z" />
+																		</DataTrigger>
+																		<DataTrigger Binding="{Binding Item.Proficiency}"
+																					 Value="5">
+																			<Setter Property="Data"
+																					Value="M4,2 L6,2 9,14 7,14Z M7,2 L9,2 12,14 10,14Z" />
+																		</DataTrigger>
+																		<DataTrigger Binding="{Binding Item.Proficiency}"
+																					 Value="6">
+																			<Setter Property="Data"
+																					Value="M2,2 L4,2 7,14 5,14Z M5.5,2 L7.5,2 10.5,14 8.5,14Z M9,2 L11,2 14,14 12,14Z" />
+																		</DataTrigger>
+																		<DataTrigger Binding="{Binding Item.Proficiency}"
+																					 Value="7">
+																			<Setter Property="Data"
+																					Value="M4,2 L6,2 9,8 6,14 4,14 7,8Z M8,2 L10,2 13,8 10,14 8,14 11,8Z" />
+																		</DataTrigger>
+																	</Style.Triggers>
+																</Style>
+															</Path.Style>
+														</Path>
+													</Grid>
+
+													<TextBlock x:Name="ItemLevelBlock"
+															   Foreground="White"
+															   Background="#33000000"
+															   Text="{Binding Item.LevelText}"
+															   FontSize="10"
+															   VerticalAlignment="Bottom"
+															   HorizontalAlignment="Right"
+															   Panel.ZIndex="1"
+															   Width="Auto"
+															   Height="Auto"
+															   Padding="1" />
+												</Grid>
 												<DataTemplate.Triggers>
 													<DataTrigger Binding="{Binding Equipped}"
 																 Value="False">
 														<Setter TargetName="Elements"
+																Property="Visibility"
+																Value="Collapsed" />
+													</DataTrigger>
+													<DataTrigger Binding="{Binding Item.LevelText}"
+																 Value="">
+														<Setter TargetName="ItemLevelBlock"
+																Property="Visibility"
+																Value="Collapsed" />
+													</DataTrigger>
+													<DataTrigger Binding="{Binding Item.Proficiency}"
+																 Value="0">
+														<Setter TargetName="ItemProficiencyBlock"
 																Property="Visibility"
 																Value="Collapsed" />
 													</DataTrigger>
@@ -298,15 +373,8 @@
 												   Style="{DynamicResource SeparatorRectangleStyleKey}"
 												   Margin="12,4,0,3" />
 										<kcvc:SlotItemIcon Type="{Binding Ship.ExSlot.Item.Info.IconType}"
-														   Margin="3,0">
-											<kcvc:SlotItemIcon.ToolTip>
-												<MultiBinding Converter="{StaticResource NameWithLevelConverter}">
-													<Binding Path="Ship.ExSlot.Item.Info.Name" Mode="OneWay" />
-													<Binding Path="Ship.ExSlot.Item.Level" Mode="OneWay" />
-													<Binding Path="Ship.ExSlot.Item.Proficiency" Mode="OneWay" />
-												</MultiBinding>
-											</kcvc:SlotItemIcon.ToolTip>
-										</kcvc:SlotItemIcon>
+														   ToolTip="{Binding Ship.ExSlot.Item.NameWithLevel}"
+														   Margin="3,0" />
 									</DockPanel>
 								</Grid>
 								<Rectangle Height=".99"
